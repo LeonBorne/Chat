@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Messages</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+
+
+</head>
+
+<body>
+    <div class="app" id="app">
+        <header>
+            <div>
+                <div class="title">Messages</div>
+                <div class="subtitle">Class 11 'E'</div>
+            </div>
+        </header>
+
+        <main class="messages" id="messages">
+            <div class="day-sep"><span>Today</span></div>
+        </main>
+
+        <form class="composer" id="composer">
+            <div class="input-wrap">
+                <button type="button" class="attach-btn" id="attachBtn">📎</button>
+                <input type="file" id="fileInput" hidden multiple>
+                <textarea id="textInput" class="text-input" placeholder="Type a message..."></textarea>
+                <button id="sendBtn" type="submit" class="send-btn">Send</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal -->
+    <div id="fattyModal" class="modal">
+        <div class="modal-content">
+            <h2>Can't upload your fatty file 😅</h2>
+            <button id="agreeBtn">I Agree</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Firebase config ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDWiyPHRyxFMcGZIU9lue5L05rVzEbcoWs",
+            authDomain: "report-backend-247a3.firebaseapp.com",
+            databaseURL: "https://report-backend-247a3-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "report-backend-247a3",
+            storageBucket: "report-backend-247a3.firebasestorage.app",
+            messagingSenderId: "836612179514",
+            appId: "1:836612179514:web:3bf4a8fb4d34a069881703",
+            measurementId: "G-VSC14ELXL5"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- Username from login ---
+        const savedUser = localStorage.getItem('chat-username');
+        if (!savedUser) {
+            window.location.href = "login.html";
+        }
+
+        const headName = document.getElementsByClassName("title")[0];
+        headName.innerHTML += " - " + savedUser;
+
+        const state = {
+            username: savedUser,
+            items: []
+        };
+
+        const messagesEl = document.getElementById('messages');
+        const textInput = document.getElementById('textInput');
+        const composer = document.getElementById('composer');
+        const attachBtn = document.getElementById('attachBtn');
+        const fileInput = document.getElementById('fileInput');
+
+        // Modal refs
+        const fattyModal = document.getElementById('fattyModal');
+        const agreeBtn = document.getElementById('agreeBtn');
+        agreeBtn.addEventListener('click', () => {
+            fattyModal.style.display = 'none';
+        });
+
+        // --- Listen to messages in DB ---
+        db.ref("messages").on("child_added", snapshot => {
+            const msg = snapshot.val();
+            const item = {
+                id: snapshot.key,
+                me: msg.username === state.username,
+                username: msg.username,
+                kind: msg.kind,
+                text: msg.text,
+                src: msg.src,
+                name: msg.name,
+                url: msg.url,
+                t: msg.t
+            };
+            state.items.push(item);
+            renderLast();
+        });
+
+        // --- Send text message ---
+        composer.addEventListener('submit', e => {
+            e.preventDefault();
+            const text = textInput.value.trim();
+            if (!text) return;
+
+            const msgObj = {
+                username: state.username,
+                kind: 'text',
+                text,
+                t: Date.now()
+            };
+            db.ref("messages").push(msgObj);
+
+            textInput.value = '';
+        });
+
+        // --- File & image upload ---
+        attachBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', e => {
+            for (const file of e.target.files) handleFile(file);
+            fileInput.value = '';
+        });
+
+        messagesEl.addEventListener('dragover', e => { e.preventDefault(); });
+        messagesEl.addEventListener('drop', e => {
+            e.preventDefault();
+            for (const file of e.dataTransfer.files) handleFile(file);
+        });
+
+        function handleFile(file) {
+            // Limit file size to 3MB
+            if (file.size > 3 * 1024 * 1024) {
+                fattyModal.style.display = 'flex'; // show modal
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                let msgObj;
+                if (file.type.startsWith('image/')) {
+                    msgObj = {
+                        username: state.username,
+                        kind: 'image',
+                        src: e.target.result, // base64
+                        name: file.name,
+                        t: Date.now()
+                    };
+                } else {
+                    msgObj = {
+                        username: state.username,
+                        kind: 'file',
+                        name: file.name,
+                        url: e.target.result, // base64
+                        t: Date.now()
+                    };
+                }
+                db.ref("messages").push(msgObj);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- Render messages ---
+        function createRow(item) {
+            const row = document.createElement('div');
+            row.className = 'row' + (item.me ? ' me' : '');
+
+            const bub = document.createElement('div');
+            bub.className = 'bubble' + (item.me ? ' me' : '');
+
+            if (item.kind === 'text') {
+                const p = document.createElement('div');
+                p.textContent = item.text;
+                bub.appendChild(p);
+            } else if (item.kind === 'image') {
+                const img = document.createElement('img');
+                img.src = item.src;
+                img.alt = item.name;
+                img.style.maxWidth = "200px";
+                bub.appendChild(img);
+            } else if (item.kind === 'file') {
+                const link = document.createElement('a');
+                link.href = item.url;
+                link.download = item.name;
+                link.textContent = '📎 ' + item.name;
+                link.style.color = 'var(--accent)';
+                link.style.textDecoration = 'none';
+                link.style.display = 'inline-block';
+                bub.appendChild(link);
+            }
+
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            const userSpan = document.createElement('span');
+            userSpan.className = 'username';
+            userSpan.textContent = item.username || 'Anon';
+            const timeSpan = document.createElement('span');
+            timeSpan.textContent = new Date(item.t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            meta.appendChild(userSpan);
+            meta.appendChild(timeSpan);
+            bub.appendChild(meta);
+
+            row.appendChild(bub);
+            return row;
+        }
+
+        function renderAll() {
+            messagesEl.innerHTML = '<div class="day-sep"><span>Today</span></div>';
+            for (const it of state.items) messagesEl.appendChild(createRow(it));
+        }
+
+        function renderLast() {
+            const it = state.items[state.items.length - 1];
+            messagesEl.appendChild(createRow(it));
+            messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+        }
+
+        // Debug auth state
+        firebase.auth().onAuthStateChanged(user => {
+            console.log("Current user:", user ? user.uid : "not logged in");
+        });
+    </script>
+</body>
+
+</html>

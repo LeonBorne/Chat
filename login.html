@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --bg: #0f1115;
+            --panel: #151923;
+            --panel-2: #191f2b;
+            --text: #e6eaf2;
+            --muted: #9aa4b2;
+            --accent: #5b8cff;
+            --accent-2: #7bd6c9;
+            --danger: #ff6b6b;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            --radius: 16px;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #f5f7fb;
+                --panel: #ffffff;
+                --panel-2: #f3f5f9;
+                --text: #111317;
+                --muted: #6b7280;
+                --accent: #3857ff;
+                --accent-2: #1fb6a6;
+                --danger: #e11d48;
+                --shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+            }
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: var(--text);
+        }
+
+        .auth-container {
+            background: var(--panel);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .auth-container h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--text);
+        }
+
+        .auth-container form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .auth-container input {
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid var(--panel-2);
+            background: var(--panel-2);
+            border-radius: 8px;
+            font-size: 1rem;
+            color: var(--text);
+        }
+
+        .auth-container input::placeholder {
+            color: var(--muted);
+        }
+
+        .auth-container button[type="submit"] {
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .auth-container button[type="submit"]:hover {
+            background: var(--accent-2);
+        }
+
+        .error {
+            color: var(--danger);
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .password-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-wrap input {
+            width: 100%;
+            padding-left: 2.5rem;
+            /* space for the button */
+            padding-right: 0.75rem;
+            height: 2.5rem;
+            /* consistent height */
+            font-size: 1rem;
+            border: 1px solid var(--panel-2);
+            border-radius: 8px;
+            background: var(--panel-2);
+            color: var(--text);
+        }
+
+        .password-wrap button {
+            position: absolute;
+            /* spacing from left edge */
+            left: 5px;
+            height: 2rem;
+            width: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: none;
+            background: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: var(--accent);
+            top: 35%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-container">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="Email" required>
+
+            <div class="password-wrap">
+                <button type="button" id="showPasswordBtn">🔒</button>
+                <input type="password" id="password" placeholder="Password" required>
+            </div>
+
+            <button type="submit">Login</button>
+        </form>
+        <div class="error" id="errorBox"></div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+        import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDWiyPHRyxFMcGZIU9lue5L05rVzEbcoWs",
+            authDomain: "report-backend-247a3.firebaseapp.com",
+            databaseURL: "https://report-backend-247a3-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "report-backend-247a3",
+            storageBucket: "report-backend-247a3.firebasestorage.app",
+            messagingSenderId: "836612179514",
+            appId: "1:836612179514:web:3bf4a8fb4d34a069881703",
+            measurementId: "G-VSC14ELXL5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+
+        const loginForm = document.getElementById("loginForm");
+        const errorBox = document.getElementById("errorBox");
+        const passwordInput = document.getElementById("password");
+        const showPasswordBtn = document.getElementById("showPasswordBtn");
+
+        // Show/hide password
+        showPasswordBtn.addEventListener("click", () => {
+            if (passwordInput.type === "password") {
+                passwordInput.type = "text";
+                showPasswordBtn.textContent = "🔓";
+            } else {
+                passwordInput.type = "password";
+                showPasswordBtn.textContent = "🔒";
+            }
+        });
+
+        // Login handler
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            errorBox.textContent = "";
+
+            const email = document.getElementById("email").value.trim();
+            const password = passwordInput.value.trim();
+
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Fetch username from Realtime Database
+                const usernameRef = ref(db, `users/${user.uid}/username`);
+                const snapshot = await get(usernameRef);
+                const username = snapshot.exists() ? snapshot.val() : email;
+
+                // Save username/email locally
+                localStorage.setItem("chat-username", username);
+                localStorage.setItem("chat-email", email);
+
+                // Redirect to chat
+                window.location.href = "index.html";
+            } catch (error) {
+                console.error(error);
+                errorBox.textContent = "❌ Invalid email or password.";
+            }
+        });
+    </script>
+</body>
+
+</html>
