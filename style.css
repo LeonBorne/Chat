@@ -218,7 +218,7 @@ body {
 
 /* Message form */
 .message-form {
-
+  display: flex;
   flex-shrink: 0; /* ✅ keeps form always visible */
   background: var(--light-chat-bg);
 }
