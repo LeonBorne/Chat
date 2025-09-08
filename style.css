@@ -38,7 +38,7 @@ body {
   display: flex;
   height: 100vh;
   overflow: hidden;
-  flex-direction: column; /* ✅ helps stacking on mobile */
+  flex-direction: row; /* ✅ helps stacking on mobile */
 }
 
 /* Sidebar */
