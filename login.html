@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" href="style.css">
     <style>
         :root {
             --bg: #0f1115;
@@ -110,10 +109,8 @@
         .password-wrap input {
             width: 100%;
             padding-left: 2.5rem;
-            /* space for the button */
             padding-right: 0.75rem;
             height: 2.5rem;
-            /* consistent height */
             font-size: 1rem;
             border: 1px solid var(--panel-2);
             border-radius: 8px;
@@ -123,7 +120,6 @@
 
         .password-wrap button {
             position: absolute;
-            /* spacing from left edge */
             left: 5px;
             height: 2rem;
             width: 2rem;
@@ -146,33 +142,21 @@
         <h2>Login</h2>
         <form id="loginForm">
             <input type="email" id="email" placeholder="Email" required>
-
             <div class="password-wrap">
                 <button type="button" id="showPasswordBtn">🔒</button>
                 <input type="password" id="password" placeholder="Password" required>
             </div>
-
             <button type="submit">Login</button>
         </form>
         <div class="error" id="errorBox"></div>
     </div>
 
-    <!-- Firebase SDKs -->
+    <script src="config.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
         import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDWiyPHRyxFMcGZIU9lue5L05rVzEbcoWs",
-            authDomain: "report-backend-247a3.firebaseapp.com",
-            databaseURL: "https://report-backend-247a3-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "report-backend-247a3",
-            storageBucket: "report-backend-247a3.firebasestorage.app",
-            messagingSenderId: "836612179514",
-            appId: "1:836612179514:web:3bf4a8fb4d34a069881703",
-            measurementId: "G-VSC14ELXL5"
-        };
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -203,22 +187,24 @@
             const password = passwordInput.value.trim();
 
             try {
+                // Firebase email/password login
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Fetch username from Realtime Database
+                // Fetch username from Realtime Database using uid
                 const usernameRef = ref(db, `users/${user.uid}/username`);
                 const snapshot = await get(usernameRef);
                 const username = snapshot.exists() ? snapshot.val() : email;
 
-                // Save username/email locally
+                // Save user info locally
+                localStorage.setItem("chat-uid", user.uid);
                 localStorage.setItem("chat-username", username);
                 localStorage.setItem("chat-email", email);
 
-                // Redirect to chat
+                // Redirect to chat page
                 window.location.href = "index.html";
             } catch (error) {
-                console.error(error);
+                // console.error(error);
                 errorBox.textContent = "❌ Invalid email or password.";
             }
         });
