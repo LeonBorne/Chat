@@ -215,9 +215,6 @@ body {
 
 /* Message form */
 .message-form {
-  position: fixed;
-  bottom: 0;
-  width: 98%;
   display: flex;
   align-items: center;
   padding: 10px;
