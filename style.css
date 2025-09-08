@@ -218,12 +218,11 @@ body {
 
 /* Message form */
 .message-form {
-  display: flex;
-  align-items: center;
-  padding: 10px;
+
+  flex-shrink: 0; /* ✅ keeps form always visible */
   background: var(--light-chat-bg);
-  gap: 10px;
 }
+
 
 .message-form input[type="text"] {
   flex-grow: 1;
