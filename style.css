@@ -25,6 +25,7 @@ body {
   color: var(--text-dark);
   -webkit-tap-highlight-color: transparent;
   /* Better mobile tap UX */
+  padding-bottom: 30px;
 }
 
 @media (prefers-color-scheme: dark) {
