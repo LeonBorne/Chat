@@ -122,8 +122,7 @@ body {
   flex-grow: 1;
   display: flex;
   flex-direction: column;
-  background: var(--light-bg);
-  transition: margin-left 0.3s ease;
+  min-height: 0; /* ✅ prevents overflow issues */
 }
 
 /* Chat header */
