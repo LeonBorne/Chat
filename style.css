@@ -154,12 +154,14 @@ body {
 /* Messages */
 .messages {
   flex-grow: 1;
-  padding: 12px;
+  min-height: 0; /* ✅ critical for scroll in flexbox */
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-bottom: 70px;
+  padding: 12px;
+  padding-bottom: 12px; /* ✅ remove big padding so form isn’t hidden */
+  box-sizing: border-box;
 }
 
 .messages::-webkit-scrollbar {
