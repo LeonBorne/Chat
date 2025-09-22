@@ -9,9 +9,104 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="favicon" href="favicon.ico">
   <style>
-      .app{
-        flex-direction : row;
+    .app {
+      flex-direction: row;
+    }
+
+    img{
+      transition: all 0.1s ease;
+    }
+    img:hover{
+      transform: scale(1.05);
+    }
+
+    /* ---- Image Modal ---- */
+    #imageModal {
+      display: flex;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    #imageModal div {
+      position: fixed;
+      top: 20px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #111;
+      transition: background-color 0.1s ease, transform 0.1s ease;
+    }
+
+    div.download {
+      right: 70px;
+    }
+
+    div.close {
+      right: 20px;
+    }
+
+    #imageModal a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: #fff;
+      font-size: 18px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.1s ease, transform 0.1s ease;
+      border-radius: 50%;
+    }
+
+    #imageModal a:hover {
+      background-color: #444;
+      transform: scale(1.15);
+    }
+
+    #imageModal img {
+      max-width: 90%;
+      max-height: 80%;
+      border-radius: 12px;
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.6);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 600px) {
+      #imageModal img {
+        max-width: 95%;
+        max-height: 70%;
       }
+
+      #imageModal div {
+        width: 42px;
+        height: 42px;
+        top: 10px;
+      }
+
+      div.download {
+        right: 60px;
+      }
+
+      div.close {
+        right: 10px;
+      }
+
+      #imageModal a {
+        font-size: 20px;
+      }
+    }
   </style>
 </head>
 
@@ -48,346 +143,368 @@
           <i class="fa-solid fa-paper-plane"></i>
         </button>
       </form>
-
     </div>
   </div>
 
-  <!-- Modal -->
-  <!-- <div class="modal" id="fatFileModal">
-    <div class="modal-content">
-      <p>Your fatty file is too fat </p>
-      <button id="closeModal">I agree</button>
-    </div>
-  </div> -->
-
+  <!-- Fat file modal -->
   <div id="fatFileModal" class="modal">
-        <div class="modal-content">
-            <h2>Can't upload your fatty file</h2>
-            <button id="closeModal">I Agree</button>
-        </div>
+    <div class="modal-content">
+      <h2>Can't upload your fatty file</h2>
+      <button id="closeModal">I Agree</button>
     </div>
-<script src="config.js"></script>
+  </div>
+
+  <!-- Image Preview Modal -->
+  <div id="imageModal" class="hidden">
+    <div class="download">
+      <a href="#" id="downloadBtn">⬇</a>
+    </div>
+    <div class="close">
+      <a href="#" id="closeImageModal">✕</a>
+    </div>
+    <img src="#" alt="Preview" id="modalImg">
+  </div>
+
+  <script src="config.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getDatabase, ref, onValue, push, set, onChildAdded, off } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getDatabase, ref, onValue, push, set, onChildAdded, off } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
 
-const chatList = document.getElementById("chatList");
-const messagesDiv = document.getElementById("messages");
-const messageForm = document.getElementById("messageForm");
-const messageInput = document.getElementById("messageInput");
-const fileInput = document.getElementById("fileInput");
-const chatPartnerName = document.getElementById("chatPartnerName");
-const chatOwnName = document.getElementById("chatOwnName");
+    const chatList = document.getElementById("chatList");
+    const messagesDiv = document.getElementById("messages");
+    const messageForm = document.getElementById("messageForm");
+    const messageInput = document.getElementById("messageInput");
+    const fileInput = document.getElementById("fileInput");
+    const chatPartnerName = document.getElementById("chatPartnerName");
+    const chatOwnName = document.getElementById("chatOwnName");
 
-const modal = document.getElementById("fatFileModal");
-const closeModalBtn = document.getElementById("closeModal");
+    const modal = document.getElementById("fatFileModal");
+    const closeModalBtn = document.getElementById("closeModal");
 
-let currentUserUid = null;
-let currentUsername = null;
-let currentChatUid = null;
-let currentChatUsername = null;
+    // Image modal
+    const imageModal = document.getElementById("imageModal");
+    const modalImg = document.getElementById("modalImg");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const closeImageModalBtn = document.getElementById("closeImageModal");
 
-// ---- Sound Alert ----
-const notificationSound = new Audio("/Chat/sounds/notification.mp3"); // change path
+    let currentUserUid = null;
+    let currentUsername = null;
+    let currentChatUid = null;
+    let currentChatUsername = null;
 
-// ---- Title Notifications ----
-let unreadCount = 0;
-const originalTitle = document.title;
+    // ---- Sound Alert ----
+    const notificationSound = new Audio("sounds/notification.mp3");
 
-function updateTitle() {
-  if (unreadCount > 0) {
-    document.title = `(${unreadCount}) New message${unreadCount > 1 ? "s" : ""} - ${originalTitle}`;
-  } else {
-    document.title = originalTitle;
-  }
-}
+    // ---- Title Notifications ----
+    let unreadCount = 0;
+    const originalTitle = document.title;
 
-window.addEventListener("focus", () => {
-  unreadCount = 0;
-  updateTitle();
-});
-
-// Modal
-function showFatFileModal() {
-  modal.style.display = "flex";
-}
-closeModalBtn.addEventListener("click", () => {
-  modal.style.display = "none";
-});
-
-// Sidebar toggle
-const sidebar = document.getElementById("sidebar");
-document.getElementById("openSidebar").addEventListener("click", () => {
-  sidebar.classList.toggle("open");
-});
-function closeSidebar() {
-  sidebar.classList.remove("open");
-}
-
-// Auth
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
-  currentUserUid = user.uid;
-
-  const usernameRef = ref(db, `users/${currentUserUid}/username`);
-  onValue(usernameRef, (snapshot) => {
-    currentUsername = snapshot.val() || "Unknown";
-    chatOwnName.innerHTML = "Signed in As - " + currentUsername;
-    populateSidebar();
-  });
-
-  // 🔔 Ask for notification permission
-  if (Notification && Notification.permission !== "granted") {
-    Notification.requestPermission();
-  }
-
-  // 🔔 Global message listener
-  const allMessagesRef = ref(db, "messages");
-  onChildAdded(allMessagesRef, (snapshot) => {
-    const msg = snapshot.val();
-    if (!msg) return;
-
-    if (msg.receiverUid === currentUserUid && msg.senderUid !== currentUserUid) {
-      // Play sound
-      notificationSound.currentTime = 0;
-      notificationSound.play().catch(() => {});
-
-      // Increase unread + update title
-      if (document.hidden) {
-        unreadCount++;
-        updateTitle();
-      }
-
-      // Desktop notification
-      if (Notification.permission === "granted" && document.hidden) {
-        const notif = new Notification(`New message from ${msg.senderUsername}`, {
-          body: msg.type === "text" ? msg.content : `[File] ${msg.fileName || "Attachment"}`,
-          icon: "/chat-icon.png"
-        });
-
-        notif.onclick = () => {
-          window.focus();
-          notif.close();
-        };
+    function updateTitle() {
+      if (unreadCount > 0) {
+        document.title = `(${unreadCount}) New message${unreadCount > 1 ? "s" : ""} - ${originalTitle}`;
+      } else {
+        document.title = originalTitle;
       }
     }
-  });
-});
 
-// Sidebar population
-function populateSidebar() {
-  const usersRef = ref(db, "users");
-  onValue(usersRef, (snapshot) => {
-    chatList.innerHTML = "";
-    const usersData = snapshot.val();
-    if (!usersData) return;
+    window.addEventListener("focus", () => {
+      unreadCount = 0;
+      updateTitle();
+    });
 
-    let userArray = [];
-    for (const uid in usersData) {
-      if (uid === currentUserUid) continue;
-      const user = usersData[uid];
-      if (!user.username) continue;
-      userArray.push({ uid, username: user.username });
+    // Modal
+    function showFatFileModal() {
+      modal.style.display = "flex";
+    }
+    closeModalBtn.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+
+    // Sidebar toggle
+    const sidebar = document.getElementById("sidebar");
+    document.getElementById("openSidebar").addEventListener("click", () => {
+      sidebar.classList.toggle("open");
+    });
+    function closeSidebar() {
+      sidebar.classList.remove("open");
     }
 
-    userArray.sort((a, b) => a.username.localeCompare(b.username));
+    // Auth
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+      currentUserUid = user.uid;
 
-    userArray.forEach(({ uid, username }, index) => {
-      const li = document.createElement("li");
-      li.classList.add("chat");
-      li.dataset.uid = uid;
-      li.dataset.username = username;
-
-      const nameSpan = document.createElement("span");
-      nameSpan.classList.add("chat-username");
-      nameSpan.textContent = username;
-
-      const previewSpan = document.createElement("span");
-      previewSpan.classList.add("chat-preview");
-      previewSpan.textContent = "Loading...";
-
-      li.appendChild(nameSpan);
-      li.appendChild(previewSpan);
-
-      li.addEventListener("click", () => {
-        selectChat(uid, username);
-        if (window.innerWidth < 768) {
-          closeSidebar();
-        }
+      const usernameRef = ref(db, `users/${currentUserUid}/username`);
+      onValue(usernameRef, (snapshot) => {
+        currentUsername = snapshot.val() || "Unknown";
+        chatOwnName.innerHTML = "Signed in As - " + currentUsername;
+        populateSidebar();
       });
 
-      chatList.appendChild(li);
+      if (Notification && Notification.permission !== "granted") {
+        Notification.requestPermission();
+      }
 
-      // Load last message preview
-      const messagesRef = ref(db, "messages");
-      onValue(messagesRef, (msgSnap) => {
-        let lastMsg = null;
-        msgSnap.forEach((child) => {
-          const msg = child.val();
-          const isRelevant =
-            (msg.senderUid === currentUserUid && msg.receiverUid === uid) ||
-            (msg.senderUid === uid && msg.receiverUid === currentUserUid);
+      const allMessagesRef = ref(db, "messages");
+      onChildAdded(allMessagesRef, (snapshot) => {
+        const msg = snapshot.val();
+        if (!msg) return;
 
-          if (isRelevant && (!lastMsg || msg.time > lastMsg.time)) {
-            lastMsg = msg;
+        if (msg.receiverUid === currentUserUid && msg.senderUid !== currentUserUid) {
+          notificationSound.currentTime = 0;
+          notificationSound.play().catch(() => { });
+
+          if (document.hidden) {
+            unreadCount++;
+            updateTitle();
+          }
+
+          if (Notification.permission === "granted" && document.hidden) {
+            const notif = new Notification(`New message from ${msg.senderUsername}`, {
+              body: msg.type === "text" ? msg.content : `[File] ${msg.fileName || "Attachment"}`,
+              icon: "/chat-icon.png"
+            });
+
+            notif.onclick = () => {
+              window.focus();
+              notif.close();
+            };
+          }
+        }
+      });
+    });
+
+    // Sidebar population
+    function populateSidebar() {
+      const usersRef = ref(db, "users");
+      onValue(usersRef, (snapshot) => {
+        chatList.innerHTML = "";
+        const usersData = snapshot.val();
+        if (!usersData) return;
+
+        let userArray = [];
+        for (const uid in usersData) {
+          if (uid === currentUserUid) continue;
+          const user = usersData[uid];
+          if (!user.username) continue;
+          userArray.push({ uid, username: user.username });
+        }
+
+        userArray.sort((a, b) => a.username.localeCompare(b.username));
+
+        userArray.forEach(({ uid, username }, index) => {
+          const li = document.createElement("li");
+          li.classList.add("chat");
+          li.dataset.uid = uid;
+          li.dataset.username = username;
+
+          const nameSpan = document.createElement("span");
+          nameSpan.classList.add("chat-username");
+          nameSpan.textContent = username;
+
+          const previewSpan = document.createElement("span");
+          previewSpan.classList.add("chat-preview");
+          previewSpan.textContent = "Loading...";
+
+          li.appendChild(nameSpan);
+          li.appendChild(previewSpan);
+
+          li.addEventListener("click", () => {
+            selectChat(uid, username);
+            if (window.innerWidth < 768) {
+              closeSidebar();
+            }
+          });
+
+          chatList.appendChild(li);
+
+          const messagesRef = ref(db, "messages");
+          onValue(messagesRef, (msgSnap) => {
+            let lastMsg = null;
+            msgSnap.forEach((child) => {
+              const msg = child.val();
+              const isRelevant =
+                (msg.senderUid === currentUserUid && msg.receiverUid === uid) ||
+                (msg.senderUid === uid && msg.receiverUid === currentUserUid);
+
+              if (isRelevant && (!lastMsg || msg.time > lastMsg.time)) {
+                lastMsg = msg;
+              }
+            });
+            if (lastMsg) {
+              previewSpan.textContent =
+                lastMsg.type === "text"
+                  ? lastMsg.content
+                  : `[File] ${lastMsg.fileName || "Attachment"}`;
+            } else {
+              previewSpan.textContent = "No messages yet";
+            }
+          });
+
+          if (index === 0 && !currentChatUid) {
+            selectChat(uid, username);
           }
         });
-        if (lastMsg) {
-          previewSpan.textContent =
-            lastMsg.type === "text"
-              ? lastMsg.content
-              : `[File] ${lastMsg.fileName || "Attachment"}`;
-        } else {
-          previewSpan.textContent = "No messages yet";
-        }
       });
-
-      if (index === 0 && !currentChatUid) {
-        selectChat(uid, username);
-      }
-    });
-  });
-}
-
-// Select chat
-function selectChat(uid, username) {
-  currentChatUid = uid;
-  currentChatUsername = username;
-  chatPartnerName.textContent = currentChatUsername;
-  messagesDiv.innerHTML = "";
-
-  const messagesRef = ref(db, "messages");
-  onValue(messagesRef, (snapshot) => {
-    messagesDiv.innerHTML = "";
-    snapshot.forEach((child) => {
-      const msg = child.val();
-
-      const isRelevant =
-        (msg.senderUid === currentUserUid && msg.receiverUid === currentChatUid) ||
-        (msg.senderUid === currentChatUid && msg.receiverUid === currentUserUid);
-
-      if (!isRelevant) return;
-
-      const div = document.createElement("div");
-      div.classList.add("message", msg.senderUid === currentUserUid ? "sent" : "received");
-
-      if (msg.type === "file") {
-        if (msg.mimeType && msg.mimeType.startsWith("image/")) {
-          div.innerHTML = `<p><img src="${msg.content}" alt="${msg.fileName}" style="max-width:150px; border-radius:8px;"></p>
-                           <span class="time">${new Date(msg.time).toLocaleTimeString()}</span>`;
-        } else {
-          div.innerHTML = `<p><a href="${msg.content}" download="${msg.fileName}">${msg.fileName}</a></p>
-                           <span class="time">${new Date(msg.time).toLocaleTimeString()}</span>`;
-        }
-      } else {
-        div.innerHTML = `<p>${msg.content}</p>
-                         <span class="time">${new Date(msg.time).toLocaleTimeString()}</span>`;
-      }
-
-      messagesDiv.appendChild(div);
-    });
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  });
-}
-
-// ---- Send Message Function ----
-async function sendMessage(text, file) {
-  if (!currentChatUid) return alert("Select a chat first");
-
-  if (file) {
-    if (file.size > 3 * 1024 * 1024) {
-      showFatFileModal();
-      fileInput.value = "";
-      return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64Data = reader.result;
+    // Select chat
+    function selectChat(uid, username) {
+      currentChatUid = uid;
+      currentChatUsername = username;
+      chatPartnerName.textContent = currentChatUsername;
+      messagesDiv.innerHTML = "";
 
-      const msgRef = push(ref(db, "messages"));
-      set(msgRef, {
-        senderUid: currentUserUid,
-        senderUsername: currentUsername,
-        receiverUid: currentChatUid,
-        receiverUsername: currentChatUsername,
-        type: "file",
-        fileName: file.name,
-        content: base64Data,
-        mimeType: file.type,
-        time: Date.now()
+      const messagesRef = ref(db, "messages");
+      onValue(messagesRef, (snapshot) => {
+        messagesDiv.innerHTML = "";
+        snapshot.forEach((child) => {
+          const msg = child.val();
+
+          const isRelevant =
+            (msg.senderUid === currentUserUid && msg.receiverUid === currentChatUid) ||
+            (msg.senderUid === currentChatUid && msg.receiverUid === currentUserUid);
+
+          if (!isRelevant) return;
+
+          const div = document.createElement("div");
+          div.classList.add("message", msg.senderUid === currentUserUid ? "sent" : "received");
+
+          if (msg.type === "file") {
+            if (msg.mimeType && msg.mimeType.startsWith("image/")) {
+              div.innerHTML = `<p><img src="${msg.content}" alt="${msg.fileName}" class="chat-img" style="max-width:150px; border-radius:8px; cursor:pointer;"></p>
+                           <span class="time">${new Date(msg.time).toLocaleTimeString()}</span>`;
+            } else {
+              div.innerHTML = `<p><a href="${msg.content}" download="${msg.fileName}">${msg.fileName}</a></p>
+                           <span class="time">${new Date(msg.time).toLocaleTimeString()}</span>`;
+            }
+          } else {
+            div.innerHTML = `<p>${msg.content}</p>
+                         <span class="time">${new Date(msg.time).toLocaleTimeString()}</span>`;
+          }
+
+          messagesDiv.appendChild(div);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+        // Bind click to images for modal
+        const chatImages = messagesDiv.querySelectorAll(".chat-img");
+        chatImages.forEach(img => {
+          img.addEventListener("click", () => {
+            modalImg.src = img.src;
+            downloadBtn.href = img.src;
+            downloadBtn.download = "image-" + Date.now() + ".png";
+            imageModal.classList.remove("hidden");
+          });
+        });
       });
-    };
-    reader.readAsDataURL(file);
+    }
 
-    fileInput.value = "";
-  } else if (text) {
-    const msgRef = push(ref(db, "messages"));
-    set(msgRef, {
-      senderUid: currentUserUid,
-      senderUsername: currentUsername,
-      receiverUid: currentChatUid,
-      receiverUsername: currentChatUsername,
-      type: "text",
-      content: text,
-      time: Date.now()
+    // ---- Send Message Function ----
+    async function sendMessage(text, file) {
+      if (!currentChatUid) return alert("Select a chat first");
+
+      if (file) {
+        if (file.size > 3 * 1024 * 1024) {
+          showFatFileModal();
+          fileInput.value = "";
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64Data = reader.result;
+
+          const msgRef = push(ref(db, "messages"));
+          set(msgRef, {
+            senderUid: currentUserUid,
+            senderUsername: currentUsername,
+            receiverUid: currentChatUid,
+            receiverUsername: currentChatUsername,
+            type: "file",
+            fileName: file.name,
+            content: base64Data,
+            mimeType: file.type,
+            time: Date.now()
+          });
+        };
+        reader.readAsDataURL(file);
+
+        fileInput.value = "";
+      } else if (text) {
+        const msgRef = push(ref(db, "messages"));
+        set(msgRef, {
+          senderUid: currentUserUid,
+          senderUsername: currentUsername,
+          receiverUid: currentChatUid,
+          receiverUsername: currentChatUsername,
+          type: "text",
+          content: text,
+          time: Date.now()
+        });
+        messageInput.value = "";
+      }
+    }
+
+    // ---- Event Listeners ----
+    messageForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      sendMessage(text, null);
     });
-    messageInput.value = "";
-  }
-}
 
-// ---- Event Listeners ----
-
-// Handle form submit
-messageForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const text = messageInput.value.trim();
-  sendMessage(text, null);
-});
-
-// Auto-send when file is selected
-fileInput.addEventListener("change", () => {
-  const file = fileInput.files[0];
-  if (file) {
-    sendMessage(null, file);
-  }
-});
-
-// Drag & Drop support
-messagesDiv.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  messagesDiv.classList.add("dragover");
-});
-
-messagesDiv.addEventListener("dragleave", () => {
-  messagesDiv.classList.remove("dragover");
-});
-
-messagesDiv.addEventListener("drop", (e) => {
-  e.preventDefault();
-  messagesDiv.classList.remove("dragover");
-
-  if (!currentChatUid) {
-    alert("Select a chat first");
-    return;
-  }
-
-  const files = e.dataTransfer.files;
-  if (files.length > 0) {
-    [...files].forEach((file) => {
-      sendMessage(null, file);
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      if (file) {
+        sendMessage(null, file);
+      }
     });
-  }
-});
 
+    messagesDiv.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      messagesDiv.classList.add("dragover");
+    });
+
+    messagesDiv.addEventListener("dragleave", () => {
+      messagesDiv.classList.remove("dragover");
+    });
+
+    messagesDiv.addEventListener("drop", (e) => {
+      e.preventDefault();
+      messagesDiv.classList.remove("dragover");
+
+      if (!currentChatUid) {
+        alert("Select a chat first");
+        return;
+      }
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        [...files].forEach((file) => {
+          sendMessage(null, file);
+        });
+      }
+    });
+
+    // Close image modal
+    closeImageModalBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      imageModal.classList.add("hidden");
+    });
+
+    imageModal.addEventListener("click", (e) => {
+      if (e.target === imageModal) {
+        imageModal.classList.add("hidden");
+      }
+    });
   </script>
 
 </body>
